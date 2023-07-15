@@ -2,7 +2,6 @@
 const mat4 = require('gl-mat4');
 const vec3 = require('gl-vec3');
 const lock = require('pointer-lock');
-//const footstep = require('./footstep')();
 
 const mouseSensibility = 0.002;
 const touchSensibility = 0.008;
@@ -290,11 +289,6 @@ module.exports = function ({getGridSegments, getGridParts}, fovY) {
 			mat4.rotateX(view, view, fmouse[0]);
 			mat4.rotateY(view, view, fmouse[1]);
 			mat4.translate(view, view, vec3.scale(tmp1, pos, -1));
-			// Update footstep
-			/*if (walkTime > 0.5)
-				footstep.update(pos, force, up);
-			if (lastWalkTime % 1 <= 0.5 && walkTime % 1 > 0.5)
-				footstep.step([pos[0], 0, pos[2]], run);*/
 			return;
 		}
 	};

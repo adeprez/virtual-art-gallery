@@ -51,7 +51,6 @@ const wallProject = (org, dir, a, b) => {
 	const wI = i[0] * vx + i[2] * vz;
 	if((wI > wA) + (wI > wB) !== 1)
 		dist = Infinity;
-	//console.log(dist, i);
 	return {a, b, dist, intersection: i};
 };
 
@@ -122,7 +121,6 @@ module.exports = function ({getGridSegments, getGridParts}, fovY) {
 				// project to the floor and the ceilling
 				let {intersection: floorPos, dist: floorDist} = planeProject(pos, touchDir, [0,1,0,0]);
 				let {dist: ceilingDist} = planeProject(pos, touchDir, [0,1,0,yLimitTouch]);
-				//console.log(floorDist, ceilingDist);
 				// get the walls suceptibles to intersect with the raycast
 				let [x,,z] = pos;
 				let [dx,,dz] = touchDir;
@@ -133,13 +131,11 @@ module.exports = function ({getGridSegments, getGridParts}, fovY) {
 					x += dx * rayStep; z += dz * rayStep;
 					walls = [...walls, ...getGridSegments(x, z)];
 				}
-				console.log([... new Set(walls)]);
 				// project to walls
 				let intersections = [... new Set(walls)]
 					.map(([a, b]) => wallProject(pos, touchDir, a, b))
 					.filter(({dist}) => dist > 0 && dist < Math.max(floorDist, ceilingDist) && dist < touchDistLimit);
 				intersections.sort((a, b) => a.dist - b.dist);
-				//console.log(intersections);
 				if (intersections.length !== 0) { 
 					// teleport to wall
 					let {intersection: [xpos,, zpos]} = intersections[0];
@@ -147,7 +143,6 @@ module.exports = function ({getGridSegments, getGridParts}, fovY) {
 					for(const [a, b] of nearParts) {
 						const midX = (a[0]+b[0]) / 2;
 						const midZ = (a[1]+b[1]) / 2;
-						//console.log(Math.hypot(xpos - midX, zpos - midZ));
 						// Snap to the front of the painting
 						if(Math.hypot(xpos - midX, zpos - midZ) < paintingSnapDist) {
 							xpos = midX;
@@ -170,7 +165,6 @@ module.exports = function ({getGridSegments, getGridParts}, fovY) {
 					.map(([a, b]) => ({a, b, dist: sdLine(endPos, a, b, tmp1, tmp2)}))
 					.filter(({dist}) => dist < viewingDist);
 				collisions.sort((a, b) => a.dist - b.dist);
-				//console.log(collisions);
 				if (collisions.length !== 0) {
 					for (let {a, b} of collisions) {
 						const distance = viewingDist - sdLine(endPos, a, b, tmp1, tmp2);
@@ -182,7 +176,6 @@ module.exports = function ({getGridSegments, getGridParts}, fovY) {
 						vec3.scale(delta, delta, distance);
 						// Offset by viewingDist from the wall
 						vec3.add(endPos, endPos, delta);
-						//console.log(distance, delta);
 					}
 				}
 				tpProgress = 0;
@@ -194,7 +187,6 @@ module.exports = function ({getGridSegments, getGridParts}, fovY) {
 						 touchSensibility);
 			lastTouch = e.touches[0];
 		}
-		//console.log(e);
 	}
 	window.addEventListener('touchstart', handleTouch);
 	window.addEventListener('touchmove', handleTouch);
@@ -241,7 +233,6 @@ module.exports = function ({getGridSegments, getGridParts}, fovY) {
 			vec3.rotateX(forward, forward, tmp1, -mouse[0]);
 			vec3.rotateX(up, up, tmp1, -mouse[0]);
 			vec3.normalize(force, force);
-			//console.log(forward, up);
 			// Move
 			const speed = (run ? runSpeed : walkSpeed);
 			vec3.scale(force, force, speed * dt);
@@ -270,7 +261,6 @@ module.exports = function ({getGridSegments, getGridParts}, fovY) {
 			}
 			const lastWalkTime = walkTime;
 			walkTime += d / (run ? runStepLen : walkStepLen);
-			//console.log(d / (run ? runStepLen : walkStepLen) / dt * 60);
 			pos[1] = height + stepHeight * Math.cos(2 * Math.PI * walkTime);
 			vec3.add(pos, pos, force);
 			// Teleportation transition
@@ -278,7 +268,6 @@ module.exports = function ({getGridSegments, getGridParts}, fovY) {
 				tpProgress += dt / tpDuration;
 				tpProgress = Math.min(tpProgress, 1);
 				const t = easeInOutQuad(tpProgress);
-				//console.log(t, tpProgress, pos);
 				vec3.set(pos, lerp(t, startPos[0], endPos[0]), pos[1],  lerp(t, startPos[2], endPos[2]));
 			}
 			// Filter mouse mouvement

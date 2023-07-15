@@ -34,7 +34,6 @@ async function loadImage(regl, p, res) {
 		aniso = regl.hasExtension('EXT_texture_filter_anisotropic') ? regl._gl.getParameter(
 			regl._gl.getExtension('EXT_texture_filter_anisotropic').MAX_TEXTURE_MAX_ANISOTROPY_EXT
 		) : 0;
-		console.log(aniso);
 	}
 	
 	let image, title;

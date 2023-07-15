@@ -27,7 +27,6 @@ const culling = (ppos, pangle, fovx, {vseg, angle}) => {
 };
 
 module.exports = (regl, {placements, getAreaIndex}) => {
-    //console.log(areas);
     let batch = [], shownBatch = [];
     let fetching = true;
     const loadPainting = (p) => {

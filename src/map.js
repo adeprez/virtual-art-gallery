@@ -127,32 +127,22 @@ function reorderPlacements(placements, r) {
     placements = [];
     let i = 0, j = places.length - 1;
     let it = [], jt = [], len = 0;
-    //console.log(segs);
-    //debugger;
-    //let temp = [...Array(segs.length)].map((_, i) => i);
     while (i < j) {
         let xi = Math.floor((places[i][0][0] + places[i][1][0]) / 4 / r);
         let yi = Math.floor((places[i][0][1] + places[i][1][1]) / 4 / r);
         let xj = Math.floor((places[j][0][0] + places[j][1][0]) / 4 / r);
         let yj = Math.floor((places[j][0][1] + places[j][1][1]) / 4 / r);
-        //console.log(i, j, xi, yi, xj, yj);
         if (xi == xj && yi == yj) {
-            //console.log("converge");
-            //console.log(temp.slice(i - len, i + 1), temp.slice(j, j + len + 1));
             merge(placements, places, i - len, i + 1, j, j + len + 1);
             it = []; jt = []; len = 0;
         } else {
-            //console.log("diverge");
             let findi = jt.findIndex(([x, y]) => x === xi && y === yi);
             let findj = it.findIndex(([x, y]) => x === xj && y === yj);
-            //console.log(findi, findj);
             if (findi !== -1) {
-                //console.log(temp.slice(i - len, i + 1), temp.slice(j + len - findi, j + len + 1));
                 merge(placements, places, i - len, i + 1, j + len - findi, j + len + 1);
                 j += len - findi; //rollback
                 it = []; jt = []; len = 0;
             } else if (findj !== -1) {
-                //console.log(temp.slice(j, j + len + 1), temp.slice(i - len, i - len + findj + 1));
                 merge(placements, places, i - len, i - len + findj + 1, j, j + len + 1);
                 i -= len - findj; //rollback
                 it = []; jt = []; len = 0;
@@ -164,7 +154,6 @@ function reorderPlacements(placements, r) {
         }
         i++; j--;
     }
-    //console.log(temp.slice(i - len, j + len + 1));
     placements.push(...places.slice(i - len, j + len + 1));
     console.timeEnd('reorder placements');
 	return placements;
@@ -194,7 +183,6 @@ function genGrid(segments, n, r) {
 			}
 		})
 	);
-	//console.log(gridSegs, gridParts);
 	const getGridSegments = (x, y) =>
 		gridSegs[Math.round(x/r - 0.5) + Math.round(y/r - 0.5) * cellCount] || [];
 	const getGridParts = (x, y) =>
@@ -234,7 +222,6 @@ module.exports = function (n = mapSize, r = cellSize, w = wallThickness, m = wal
 		.fill()
 		.flatMap((_, i) => [i * 4, i * 4 + 2, i * 4 + 1, i * 4 + 1, i * 4 + 2, i * 4 + 3]);
 	console.timeEnd('gen mesh');
-    console.log(placements.length + " available painting placements");
 	return {
 		placements,
 		getAreaIndex,

@@ -1,15 +1,13 @@
 {
 	"name": "virtual_art_gallery",
-	"description": "Explore an art gallery in your browser.",
+	"description": "Explore a virtual art gallery",
 	"version": "1.0.0",
 	"scripts": {
-		"start": "budo src/index.js",
+		"start": "budo src/webindex.js",
 		"build:js": "browserify -p tinyify src/index.js > build/virtual-art-gallery.js",
-		"build:html": "browserify -p tinyify src/index.js | htmlify base.html > build/index.html",
+		"build:html": "browserify -p tinyify src/webindex.js | htmlify base.html > build/index.html",
 		"build": "npm run build:js && npm run build:html",
-		"genList": "node images/generateList.js",
-		"prestart": "npm run genList",
-		"prebuild": "npm run genList"
+		"prebuild": "rm -rf build && mkdir build"
 	},
 	"license": "MIT",
 	"dependencies": {
@@ -18,8 +16,7 @@
 		"gl-mat4": "^1.2.0",
 		"gl-vec3": "^1.1.3",
 		"pointer-lock": "^0.0.4",
-		"regl": "^1.7.0",
-		"stats.js": "^0.17.0"
+		"regl": "^1.7.0"
 	},
 	"devDependencies": {
 		"@babel/core": "^7.15.0",

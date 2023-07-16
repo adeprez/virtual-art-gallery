@@ -10,35 +10,47 @@ const loadTexture = async (texture, url) => {
     });
 };
 
-module.exports = (regl, data, useReflexion) => {
+module.exports = (regl, data, useReflexion, resources, mapConfig) => {
     const wallTexture = regl.texture();
     const floorTexture = regl.texture();
-    loadTexture(wallTexture, "res/wall.jpg");
-    loadTexture(floorTexture, "res/floor.jpg");
+    const roofTexture = regl.texture();
+    const topShadow = Math.min(.9, .7 + 1 / mapConfig.wallHeight / 1.5);
+    loadTexture(wallTexture, resources.wallTexture);
+    loadTexture(floorTexture, resources.floorTexture);
+    loadTexture(roofTexture, resources.roofTexture);
+    function v(v) {
+        return Number.isInteger(v) ? v + '.' : v;
+    }
     return regl({
         frag: `
         precision lowp float;
         varying vec3 v_pos, v_relativepos, v_normal;
         uniform sampler2D wallTexture;
         uniform sampler2D floorTexture;
+        uniform sampler2D roofTexture;
 
         vec3 hue2rgb(float h) {
-            vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
+            vec4 K = vec4(1., 2. / 3., 1. / 3., 3.);
             vec3 p = abs(fract(vec3(h) + K.xyz) * 6.0 - K.www);
-            return mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), 0.08);
+            return mix(K.xxx, clamp(p - K.xxx, 0., 1.), .08);
         }
 
         void main() {
-            vec3 totalLight = texture2D(wallTexture, vec2(v_pos.x + v_pos.z, 7.0-v_pos.y)/8.0).rgb;
+            vec3 totalLight;
             float dist = length(v_relativepos);
-            totalLight = mix(totalLight, vec3(90.0,92.0,95.0)/255.0, step(6.99, v_pos.y));
-            totalLight *= mix(0.7, 1.0, smoothstep(0.1, 0.12, v_pos.y));
-            totalLight *= abs(v_normal.x)/64.0 + 1.0;
-            if(v_normal.y > 0.0) {
-                totalLight = 0.47+0.1*texture2D(floorTexture, v_pos.xz / 8.0).rgb;
+            if(v_normal.y > 0.) {
+                totalLight = ${v(mapConfig.floorLight)} + ${v(mapConfig.floorIntensity)} * texture2D(floorTexture, v_pos.xz / ${v(mapConfig.floorTextureSize)}).rgb;
+            } else if (v_normal.y < 0.) {
+                totalLight = ${v(mapConfig.roofLight)} + ${v(mapConfig.roofIntensity)} * texture2D(roofTexture, v_pos.xz / ${v(mapConfig.roofTextureSize)}).rgb;
+            } else {
+                totalLight = mix(totalLight, vec3(90.,92.,95.) / 255., smoothstep(${v(mapConfig.wallHeight)} - .1, ${v(mapConfig.wallHeight)}, v_pos.y));
+                totalLight = texture2D(wallTexture, vec2(v_pos.x + v_pos.z, 7. - v_pos.y) / ${v(mapConfig.wallTextureSize)}).rgb;
+                totalLight *= mix(.9, 1.0, smoothstep(.1, .12, v_pos.y));
+                totalLight *= mix(1., ${v(topShadow)}, smoothstep(0., ${v(mapConfig.wallHeight)} * .9, v_pos.y));
+                totalLight *= abs(v_normal.x) / 64. + 1.;
             }
-            totalLight *= (0.5 + 0.5*hue2rgb(0.5 + (v_pos.x + v_pos.z) / 160.0)); //color variation
-            float alpha = .98+smoothstep(150.,0.,dist)-v_normal.y; // reflexion
+            totalLight *= (${v(mapConfig.roomLight)} + .5 * hue2rgb(.5 + (v_pos.x + v_pos.z) / 160.));
+            float alpha = ${v(mapConfig.floorReflexion)} + smoothstep(150., 0., dist) - v_normal.y;
             gl_FragColor = vec4(totalLight, ${useReflexion ? "alpha" : "1.0"});
         }`,
 
@@ -72,7 +84,8 @@ module.exports = (regl, data, useReflexion) => {
 
         uniforms: {
             wallTexture,
-            floorTexture
+            floorTexture,
+            roofTexture,
         },
 
         elements: new Uint32Array(data.elements)

@@ -1,8 +1,5 @@
 'strict mode';
 
-const api = require('../api/api');
-const selectedApi = new URLSearchParams(window.location.search).get("api");
-const dataAccess = api[selectedApi] || api[api.default];
 const text = require('./text');
 
 let paintingCache = {};
@@ -29,7 +26,7 @@ const emptyImage = (regl) => [
 	1
 ];
 
-async function loadImage(regl, p, res) {
+async function loadImage(loader, regl, p, res) {
 	if (aniso === false) {
 		aniso = regl.hasExtension('EXT_texture_filter_anisotropic') ? regl._gl.getParameter(
 			regl._gl.getExtension('EXT_texture_filter_anisotropic').MAX_TEXTURE_MAX_ANISOTROPY_EXT
@@ -38,7 +35,7 @@ async function loadImage(regl, p, res) {
 	
 	let image, title;
 	try {
-		const data = await dataAccess.fetchImage(p, dynamicQual(res));
+		const data = await loader.fetchImage(p, dynamicQual(res));
 		title = data.title;
 		// Resize image to a power of 2 to use mipmap (faster than createImageBitmap resizing)
 		image = await createImageBitmap(data.image);
@@ -46,7 +43,7 @@ async function loadImage(regl, p, res) {
 	} catch(e) {
 		// Try again with a lower resolution, otherwise return an empty image
 		console.error(e);
-		return res == "high" ? await loadImage(regl, p, "low") : emptyImage(regl);
+		return res == "high" ? await loadImage(loader, regl, p, "low") : emptyImage(regl);
 	}
 
 	return [(unusedTextures.pop() || regl.texture)({
@@ -61,19 +58,19 @@ async function loadImage(regl, p, res) {
 	];
 }
 
-module.exports = {
-	fetch: (regl, count = 10, res = "low", cbOne, cbAll) => {
+module.exports = (config) => ({
+	fetch: (regl, count = config.loadCount, res = "low", cbOne, cbAll) => {
 		const from = Object.keys(paintingCache).length;
-		dataAccess.fetchList(from, count).then(paintings => {
+		config.loader.fetchList(from, count).then(paintings => {
 			count = paintings.length;
-			paintings.map(p => {
+			paintings.forEach(p => {
 				if (paintingCache[p.image_id]) {
 					if (--count === 0)
 						cbAll();
 					return;
 				}
 				paintingCache[p.image_id] = p;
-				loadImage(regl, p, res).then(([tex, textGen, aspect]) => {
+				loadImage(config.loader, regl, p, res).then(([tex, textGen, aspect]) => {
 					cbOne({ ...p, tex, textGen, aspect });
 					if (--count === 0)
 						cbAll();
@@ -85,7 +82,7 @@ module.exports = {
 		if (p.tex || p.loading)
 			return;
 		p.loading = true;
-		loadImage(regl, p, res).then(([tex, textGen]) => {
+		loadImage(config.loader, regl, p, res).then(([tex, textGen]) => {
 			p.loading = false;
 			p.tex = tex;
 			p.text = textGen(p.width);
@@ -101,4 +98,4 @@ module.exports = {
 			p.text = undefined;
 		}
 	}
-};
+})

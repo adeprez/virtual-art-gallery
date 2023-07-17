@@ -221,9 +221,6 @@ module.exports = function ({getGridSegments, getGridParts}, fovY) {
 			// Delta time
 			const dt = time - lastTime;
 			lastTime = time;
-			// Cache matrix
-			//if (!rotate && dir[0] === 0 && dir[2] === 0 && walkTime === 0.25) return;
-			//rotate = false;
 			// Force, Up and Forward direction
 			let tmp1 = [0, 0, 0], tmp2 = []; //reduce gc performance problem
 			vec3.set(forward, 1, 0, 0);

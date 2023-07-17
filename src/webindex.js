@@ -21,5 +21,7 @@ require('./index')({
     roofLight: .05,
     roofIntensity: 0.65,
     roofTextureSize: 4,
-  }
+  },
+  loader: require('./loader/artic'),
+  loadCount: 10,
 });

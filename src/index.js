@@ -27,12 +27,12 @@ module.exports = function(config) {
 		attributes: { alpha : false }
 	});
 
-	map = require('./map')(config.map);
-	const mesh = require('./mesh');
+	map = require('./render/map')(config.map);
+	const mesh = require('./render/mesh');
 	drawMap = mesh(regl, map, useReflexion, config.resources, config.map);
-	placement = require('./placement')(regl, map);
-	drawPainting = require('./painting')(regl);
-	fps = require('./fps')(map, fovY);
+	placement = require('./render/placement')(config, regl, map);
+	drawPainting = require('./render/painting')(regl);
+	fps = require('./render/fps')(map, fovY);
 
 	const context = regl({
 		cull: {

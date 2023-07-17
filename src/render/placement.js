@@ -1,5 +1,4 @@
 'use strict';
-const texture = require('./image');
 const mat4 = require('gl-mat4');
 
 const renderDist = 20;
@@ -26,7 +25,8 @@ const culling = (ppos, pangle, fovx, {vseg, angle}) => {
     return true;
 };
 
-module.exports = (regl, {placements, getAreaIndex}) => {
+module.exports = (config, regl, {placements, getAreaIndex}) => {
+    const texture = require('./image')(config);
     let batch = [], shownBatch = [];
     let fetching = true;
     const loadPainting = (p) => {

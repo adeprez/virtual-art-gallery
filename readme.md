@@ -1,6 +1,6 @@
-# [Virtual Art Gallery](https://clementcariou.github.io/virtual-art-gallery/build) [![Build Status](https://github.com/ClementCariou/virtual-art-gallery/actions/workflows/build-and-deploy.yml/badge.svg)](https://github.com/ClementCariou/virtual-art-gallery/actions/workflows/build-and-deploy.yml)
+# Virtual Art Gallery
 
-[![screenshot](ArtGallery.png "App screenshot")](https://clementcariou.github.io/virtual-art-gallery/build)
+![screenshot](ArtGallery.jpg "App screenshot")
 
 ## Description
 
@@ -8,13 +8,14 @@ This project simulates an art gallery in your browser using [REGL](https://githu
 It aims at reproducing the experience of a real art gallery.
 The architecture is generated using a 10km long 6th order [Hilbert Curve](https://en.wikipedia.org/wiki/Hilbert_curve).
 The paintings are asynchronously loaded from the [ARTIC](https://api.artic.edu) and placed on the walls.
+Image loader can be replaced can be replaced through configuration.
 You can use this project to display your own artworks.
 
 ## Setup
 
 Installation :
 ```shell
-git clone https://github.com/ClementCariou/virtual-art-gallery.git
+git clone https://github.com/adeprez/virtual-art-gallery.git
 npm install
 ```
 Start the budo dev server : 
@@ -26,6 +27,34 @@ Build :
 npm build
 ```
 
-## Using it with [local images](https://clementcariou.github.io/virtual-art-gallery/build?api=local)
+## Configuration
 
-The local api is accessible using this URI params in the address bar: ```?api=local``` (it's possible to load automatically this API by changing the default API in the [api.js](api/api.js) file). You can change the displayed images in the folder [images](images), you will need to rebuild the project (or relauch the dev server) to apply the modifications.
+You can configure the room aspect and datasource through the configuration passed to the index module :
+
+```
+require('./index')({
+  resources: {
+    wallTexture: 'res/wall.jpg',
+    floorTexture: 'res/floor.jpg',
+    roofTexture: 'res/wall.jpg',
+  },
+  map: {
+    gridSize: 6, // Log2 of the grid size (keep the value between [1, 6])
+    roomSize: 9,
+    roomLight: 0.55,
+    floorReflexion: 0.98,
+    floorLight: 0.6,
+    floorIntensity: 0.15,
+    floorTextureSize: 8,
+    wallHeight: 8,
+    wallThickness: 0.25,
+    wallRemoval: 0.5, // Random wall removal proportion
+    wallTextureSize: 1,
+    roofLight: .05,
+    roofIntensity: 0.65,
+    roofTextureSize: 4,
+  },
+  loader: require('./loader/artic'),
+  loadCount: 10,
+});
+```

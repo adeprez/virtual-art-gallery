@@ -1,6 +1,8 @@
 'use strict';
 
 require('./index')({
+  frame: window,
+  container: document.body,
   resources: {
     wallTexture: 'res/wall.jpg',
     floorTexture: 'res/floor.jpg',

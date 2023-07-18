@@ -1,18 +1,20 @@
 'use strict';
 
 module.exports = function(config) {
+	const getWidth = () => config.frame.innerWidth || config.frame.clientWidth;
+	const getHeight = () => config.frame.innerHeight || config.frame.clientHeight;
 	var useReflexion = true;
 
 	// Handle different screen ratios
 	const mapVal = (value, min1, max1, min2, max2) => min2 + (value - min1) * (max2 - min2) / (max1 - min1);
-	var fovX = () => mapVal(window.innerWidth / window.innerHeight, 16/9, 9/16, 1.7, Math.PI / 3);
+	var fovX = () => mapVal(getWidth() / getHeight(), 16/9, 9/16, 1.7, Math.PI / 3);
 
-	if (navigator.userAgent.match(/(iPad)|(iPhone)|(iPod)|(android)|(webOS)/i)) {
+	if (navigator?.userAgent && navigator.userAgent.match(/(iPad)|(iPhone)|(iPod)|(android)|(webOS)/i)) {
 		useReflexion = false;
 		// Account for the searchbar
-		fovX = () => mapVal(window.innerWidth / window.innerHeight, 16/9, 9/16, 1.5, Math.PI / 3);
+		fovX = () => mapVal(getWidth() / getHeight(), 16/9, 9/16, 1.5, Math.PI / 3);
 	}
-	var fovY = () => 2 * Math.atan(Math.tan(fovX() * 0.5) * window.innerHeight / window.innerWidth);
+	var fovY = () => 2 * Math.atan(Math.tan(fovX() * 0.5) * getHeight() / getWidth());
 
 	let regl, map, drawMap, placement, drawPainting, fps;
 
@@ -24,7 +26,8 @@ module.exports = function(config) {
 		optionalExtensions: [
 			'EXT_texture_filter_anisotropic'
 		],
-		attributes: { alpha : false }
+		attributes: { alpha : false },
+		container: config.container,
 	});
 
 	map = require('./render/map')(config.map);
@@ -32,7 +35,7 @@ module.exports = function(config) {
 	drawMap = mesh(regl, map, useReflexion, config.resources, config.map);
 	placement = require('./render/placement')(config, regl, map);
 	drawPainting = require('./render/painting')(regl);
-	fps = require('./render/fps')(map, fovY);
+	fps = require('./render/fps')(config, map, fovY);
 
 	const context = regl({
 		cull: {

@@ -4,7 +4,7 @@
 	"version": "1.0.0",
 	"scripts": {
 		"start": "budo src/webindex.js",
-		"build:js": "browserify -p tinyify src/index.js > build/virtual-art-gallery.js",
+		"build:js": "browserify -p tinyify src/libindex.js > build/virtual-art-gallery.js",
 		"build:html": "browserify -p tinyify src/webindex.js | htmlify base.html > build/index.html",
 		"build": "npm run build:js && npm run build:html",
 		"prebuild": "rm -rf build && mkdir build"

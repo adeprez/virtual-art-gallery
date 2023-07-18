@@ -4,7 +4,8 @@ const vec3 = require('gl-vec3');
 const lock = require('pointer-lock');
 
 const mouseSensibility = 0.002;
-const touchSensibility = 0.008;
+const touchSensibility = 0.0015;
+const touchSensibilityInverted = 0.008;
 const rotationFilter = 0.95;
 const limitAngle = Math.PI / 4;
 const slowAngle = Math.PI / 6;
@@ -59,7 +60,9 @@ const lerp = (x, a, b) => (1 - x) * a + x * b;
 const easeInOutQuad = x =>
 	x < 0.5 ? 2 * x * x : 1 - Math.pow(-2 * x + 2, 2) / 2;
 
-module.exports = function ({getGridSegments, getGridParts}, fovY) {
+module.exports = function (config, {getGridSegments, getGridParts}, fovY) {
+	const getWidth = () => config.frame.innerWidth || config.frame.clientWidth;
+	const getHeight = () => config.frame.innerHeight || config.frame.clientHeight;
 	var mouse = [0, Math.PI * 3 / 4];
 	var fmouse = [0, Math.PI * 3 / 4];
 	var dir = [0, 0, 0];
@@ -85,12 +88,15 @@ module.exports = function ({getGridSegments, getGridParts}, fovY) {
 	};
 
 	// Mouse input
-	let pointer = lock(document.body);
-	pointer.on('attain', (movements) => {
-		movements.on('data', (move) => {
-			orientCamera(move.dx, move.dy, mouseSensibility);
+	let pointer;
+	if (config.cameraMouse) {
+		pointer = lock(config.container);
+		pointer.on('attain', (movements) => {
+			movements.on('data', (move) => {
+				orientCamera(move.dx, move.dy, mouseSensibility);
+			});
 		});
-	});
+	}
 
 	// Touch input
 	let firstTouch = false;
@@ -100,12 +106,12 @@ module.exports = function ({getGridSegments, getGridParts}, fovY) {
 		if(pointer) {
 			pointer.destroy();
 			pointer = false;
-			//document.querySelector("canvas").requestFullscreen();
 		}
-		if(e.type === "touchstart"){
-			firstTouch = lastTouch = e.touches[0];
+		const dir = config.invertTouch ? 1 : -1;
+		if(e.type === "touchstart" || e.type === "mousedown"){
+			firstTouch = lastTouch = e.touches ? e.touches[0] : e;
 			touchTimestamp = e.timeStamp;
-		} else if(e.type === "touchend") {
+		} else if(e.type === "touchend" || e.type === "mouseup" || e.type === "mouseleave") {
 			const d = Math.hypot(
 				firstTouch.pageX - lastTouch.pageX,
 				firstTouch.pageY - lastTouch.pageY
@@ -113,7 +119,7 @@ module.exports = function ({getGridSegments, getGridParts}, fovY) {
 			if(e.timeStamp - touchTimestamp < durationToClick && d < distToClick) {
 				// compute touch vector
 				let tmp = [], tmp1 = [], tmp2 = [];
-				let touchDir = [-1 + 2 * lastTouch.pageX / window.innerWidth, 1 - 2 * lastTouch.pageY / window.innerHeight, 0];
+				let touchDir = [-1 + 2 * lastTouch.pageX / getWidth(), 1 - 2 * lastTouch.pageY / getHeight(), 0];
 				vec3.transformMat4(touchDir, touchDir, mat4.invert(tmp, proj));
 				vec3.transformMat4(touchDir, touchDir, mat4.invert(tmp, view));
 				vec3.sub(touchDir, touchDir, pos);
@@ -181,16 +187,26 @@ module.exports = function ({getGridSegments, getGridParts}, fovY) {
 				tpProgress = 0;
 			}
 			firstTouch = lastTouch = false;
-		} else if(e.type === "touchmove" && lastTouch) {
-			orientCamera(e.touches[0].pageX - lastTouch.pageX, 
-						 e.touches[0].pageY - lastTouch.pageY,
-						 touchSensibility);
-			lastTouch = e.touches[0];
+		} else if((e.type === "touchmove" || e.type === "mousemove") && lastTouch) {
+			const t = e.touches ? e.touches[0] : e;
+			orientCamera(
+				dir * (t.pageX - lastTouch.pageX), 
+				dir * (t.pageY - lastTouch.pageY),
+				config.invertTouch ? touchSensibilityInverted : touchSensibility
+			);
+			lastTouch = t;
 		}
 	}
-	window.addEventListener('touchstart', handleTouch);
-	window.addEventListener('touchmove', handleTouch);
-	window.addEventListener('touchend', handleTouch);
+	config.frame.addEventListener('touchstart', handleTouch);
+	config.frame.addEventListener('touchmove', handleTouch);
+	config.frame.addEventListener('touchend', handleTouch);
+
+	if (!config.cameraMouse) {
+		config.frame.addEventListener('mouseup', handleTouch);
+		config.frame.addEventListener('mousemove', handleTouch);
+		config.frame.addEventListener('mousedown', handleTouch);
+		config.frame.addEventListener('mouseleave', handleTouch);
+	}
 
 	// Keyboard input
 	var keys = {};
@@ -205,8 +221,8 @@ module.exports = function ({getGridSegments, getGridParts}, fovY) {
 		dir = [right - left, 0, down - up];
 		e.preventDefault();
 	};
-	window.addEventListener('keydown', handleKey);
-	window.addEventListener('keyup', handleKey);
+	config.frame.addEventListener('keydown', handleKey);
+	config.frame.addEventListener('keyup', handleKey);
 
 	// First person scope
 	var lastTime = 0;
@@ -214,7 +230,7 @@ module.exports = function ({getGridSegments, getGridParts}, fovY) {
 		pos, fmouse, forward, up,
 		view: () => view,
 		proj: () => {
-			mat4.perspective(proj, fovY(), window.innerWidth / window.innerHeight, 0.1, 100);
+			mat4.perspective(proj, fovY(), getWidth() / getHeight(), 0.1, 100);
 			return proj;
 		},
 		tick: ({ time }) => {
@@ -256,7 +272,6 @@ module.exports = function ({getGridSegments, getGridParts}, fovY) {
 				if ((walkTime + 0.01) % 0.25 < 0.02)
 					walkTime = 0.25;
 			}
-			const lastWalkTime = walkTime;
 			walkTime += d / (run ? runStepLen : walkStepLen);
 			pos[1] = height + stepHeight * Math.cos(2 * Math.PI * walkTime);
 			vec3.add(pos, pos, force);

@@ -2,9 +2,6 @@
 
 const text = require('./text');
 
-let paintingCache = {};
-let unusedTextures = [];
-
 const dynamicQualThreshold = 2;
 function dynamicQual(quality) {
 	if(!navigator.connection || navigator.connection.downlink < dynamicQualThreshold) {
@@ -20,13 +17,13 @@ ctx.mozImageSmoothingEnabled = false;
 ctx.webkitImageSmoothingEnabled = false;
 let aniso = false;
 
-const emptyImage = (regl) => [
+const emptyImage = (regl, unusedTextures) => [
 	(unusedTextures.pop() || regl.texture)([[[200, 200, 200]]]),
 	_=>(unusedTextures.pop() || regl.texture)([[[0, 0, 0, 0]]]),
 	1
 ];
 
-async function loadImage(loader, regl, p, res) {
+async function loadImage(loader, regl, p, res, unusedTextures) {
 	if (aniso === false) {
 		aniso = regl.hasExtension('EXT_texture_filter_anisotropic') ? regl._gl.getParameter(
 			regl._gl.getExtension('EXT_texture_filter_anisotropic').MAX_TEXTURE_MAX_ANISOTROPY_EXT
@@ -43,7 +40,7 @@ async function loadImage(loader, regl, p, res) {
 	} catch(e) {
 		// Try again with a lower resolution, otherwise return an empty image
 		console.error(e);
-		return res == "high" ? await loadImage(loader, regl, p, "low") : emptyImage(regl);
+		return res == "high" ? await loadImage(loader, regl, p, "low", unusedTextures) : emptyImage(regl, unusedTextures);
 	}
 
 	return [(unusedTextures.pop() || regl.texture)({
@@ -58,44 +55,49 @@ async function loadImage(loader, regl, p, res) {
 	];
 }
 
-module.exports = (config) => ({
-	fetch: (regl, count = config.loadCount, res = "low", cbOne, cbAll) => {
-		const from = Object.keys(paintingCache).length;
-		config.loader.fetchList(from, count).then(paintings => {
-			count = paintings.length;
-			paintings.forEach(p => {
-				if (paintingCache[p.image_id]) {
-					if (--count === 0)
-						cbAll();
-					return;
-				}
-				paintingCache[p.image_id] = p;
-				loadImage(config.loader, regl, p, res).then(([tex, textGen, aspect]) => {
-					cbOne({ ...p, tex, textGen, aspect });
-					if (--count === 0)
-						cbAll();
-				});
-			})
-		});
-	},
-	load: (regl, p, res = "low") => {
-		if (p.tex || p.loading)
-			return;
-		p.loading = true;
-		loadImage(config.loader, regl, p, res).then(([tex, textGen]) => {
-			p.loading = false;
-			p.tex = tex;
-			p.text = textGen(p.width);
-		});
-	},
-	unload: (p) => {
-		if (p.tex) {
-			unusedTextures.push(p.tex);
-			p.tex = undefined;
-		}
-		if (p.text) {
-			unusedTextures.push(p.text);
-			p.text = undefined;
+module.exports = (config) => {
+	const paintingCache = {};
+	const unusedTextures = [];
+
+	return {
+		fetch: (regl, count = config.loadCount, res = "low", cbOne, cbAll) => {
+			const from = Object.keys(paintingCache).length;
+			config.loader.fetchList(from, count).then(paintings => {
+				count = paintings.length;
+				paintings.forEach(p => {
+					if (paintingCache[p.image_id]) {
+						if (--count === 0)
+							cbAll();
+						return;
+					}
+					paintingCache[p.image_id] = p;
+					loadImage(config.loader, regl, p, res, unusedTextures).then(([tex, textGen, aspect]) => {
+						cbOne({ ...p, tex, textGen, aspect });
+						if (--count === 0)
+							cbAll();
+					});
+				})
+			});
+		},
+		load: (regl, p, res = "low") => {
+			if (p.tex || p.loading)
+				return;
+			p.loading = true;
+			loadImage(config.loader, regl, p, res).then(([tex, textGen]) => {
+				p.loading = false;
+				p.tex = tex;
+				p.text = textGen(p.width);
+			});
+		},
+		unload: (p) => {
+			if (p.tex) {
+				unusedTextures.push(p.tex);
+				p.tex = undefined;
+			}
+			if (p.text) {
+				unusedTextures.push(p.text);
+				p.text = undefined;
+			}
 		}
 	}
-})
+}
